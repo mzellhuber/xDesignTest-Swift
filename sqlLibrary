@@ -128,6 +128,33 @@ extension SQLite3Conn {
         
         return Munro(id: id, name: name, height: height, category: category as NSString, gridReference: grid as NSString)
     }
+
+    func munroBy(name: String) -> Munro? {
+        let querySql = "SELECT * FROM munro WHERE \"Name\" = ?;"
+        
+        guard let queryStatement = try? prepareStatement(sql: querySql) else {
+            return nil
+        }
+        
+        defer {
+            sqlite3_finalize(queryStatement)
+        }
+        
+        guard sqlite3_bind_text(queryStatement, 1, name, -1, nil) == SQLITE_OK else {
+            return nil
+        }
+        
+        guard sqlite3_step(queryStatement) == SQLITE_ROW else {
+            return nil
+        }
+        
+        let id = sqlite3_column_int(queryStatement, 0)
+        
+        let queryResultCol1 = sqlite3_column_text(queryStatement, 5)
+        let name = String(cString: queryResultCol1!) as NSString
+        
+        return Munro(id: id, name: name, height: 0, category: "", gridReference: "")
+    }
 }
 
 //Tests
@@ -135,3 +162,6 @@ let d = SQLite3Conn()!
 d.query(maxResults:10)
 let munro = d.munroBy(id:2)
 print("\(munro?.id) \(munro?.name) \(munro?.height) \(munro?.category) \(munro?.gridReference)")
+
+let munro2 = d.munroBy(name:"Beinn an Lochain")
+print("\(munro2?.id) \(munro2?.name) \(munro2?.height) \(munro2?.category) \(munro2?.gridReference)")
