@@ -1,0 +1,8 @@
+#!/bin/bash
+
+sqlite3 munro.sqlite <<EOS
+.mode csv
+.import munro.csv munro
+.exit
+
+EOS
