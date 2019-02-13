@@ -3,7 +3,6 @@
 import Foundation
 import SQLite3
 
-
 enum SQLite3Error : Error {
 	case connectionError(String)
 	case queryError(String)
@@ -14,6 +13,17 @@ enum SQLite3Error : Error {
 enum HillType : String{
 	case munro = "MUN"
 	case munroTop = "TOP"
+}
+
+enum OrderType: String{
+	case ascending = "ASC"
+	case descending = "DESC"
+}
+
+enum OrderCategory : String{
+	case height = "\"Height (m)\""
+	case alphabetically = "Name"
+	case id = "\"Running No\""
 }
 
 class SQLite3Conn {
@@ -35,15 +45,6 @@ class SQLite3Conn {
 	}
 }
 
-struct Munro {
-	// Each item should contain the name, height in meters, hill category and grid reference
-	let id: Int32
-	let name: NSString
-	let height: Int32
-	let category: NSString
-	let gridReference: NSString
-}
-
 extension SQLite3Conn {
 	func prepareStatement(sql: String) throws -> OpaquePointer? {
 		var statement: OpaquePointer? = nil
@@ -56,13 +57,20 @@ extension SQLite3Conn {
 
 extension SQLite3Conn {
 
-	func runQuery(query:String){
-		guard let queryStatement = try? prepareStatement(sql: query) else {
+	func runQuery(query:String, orderByCategory: OrderCategory = OrderCategory.id, orderByType: OrderType = OrderType.ascending, maxResults: Int = 0){
+
+		var finalQuery = query + " ORDER BY \(orderByCategory.rawValue) \(orderByType.rawValue)"
+
+		if maxResults != 0 {
+			finalQuery =  addLimit(query:finalQuery, limit:maxResults)
+		}
+
+		guard let queryStatement = try? prepareStatement(sql: finalQuery) else {
 			return
 		}
 
 		while (sqlite3_step(queryStatement) == SQLITE_ROW) {
-			let id = sqlite3_column_int(queryStatement, 0)
+			//let id = sqlite3_column_int(queryStatement, 0)
 			
 			let queryResultNameCol = sqlite3_column_text(queryStatement, 5)
 			let name = String(cString: queryResultNameCol!)
@@ -70,7 +78,7 @@ extension SQLite3Conn {
 
 			let queryResultCategoryCol = sqlite3_column_text(queryStatement, 27)
 			var category = String(cString: queryResultCategoryCol!)
-			if category == HillType.munro.rawValue{
+			if category == "MUN"{
 				category = "Munro"
 			}else{
 				category = "Munro Top"
@@ -86,63 +94,66 @@ extension SQLite3Conn {
 		sqlite3_finalize(queryStatement)
 	}
 
-	func query(maxResults:Int = 0) {
+	func addLimit(query:String, limit:Int) -> String{
+		return query + " LIMIT 0,\(limit) "
+	}
+
+	func query(maxResults:Int = 0, orderByCategory: OrderCategory = OrderCategory.id, orderByType: OrderType = OrderType.ascending) {
 		
-		var querySql = "SELECT * FROM munro where \"Post 1997\" != '';"
+		var querySql = "SELECT * FROM munro where \"Post 1997\" != ''"
 
 		if maxResults != 0 {
-			querySql = "SELECT * FROM munro where \"Post 1997\" != '' LIMIT 0,\(maxResults) ;"
+			querySql =  addLimit(query:querySql, limit:maxResults)
 		}
 				
-		runQuery(query:querySql)
+		runQuery(query:querySql, orderByCategory:orderByCategory, orderByType:orderByType)
+
 	}
 	
 	func munroBy(id: Int32){
-		let querySql = "SELECT * FROM munro WHERE \"Running No\" = \(id) and \"Post 1997\" != '';"
-		
+		let querySql = "SELECT * FROM munro WHERE \"Running No\" = \(id) and \"Post 1997\" != ''"
 		runQuery(query:querySql)
 	}
 
 	func munroBy(name: String){
-		let querySql = "SELECT * FROM munro WHERE Name = \"\(name)\" and \"Post 1997\" != '';"
+		let querySql = "SELECT * FROM munro WHERE Name = \"\(name)\" and \"Post 1997\" != ''"
 		runQuery(query:querySql)
 	}
 
-	func munroBy(category: HillType, maxResults:Int = 0){
+	func munroBy(category: HillType, maxResults:Int = 0 , orderByCategory: OrderCategory = OrderCategory.id, orderByType: OrderType = OrderType.ascending){
+
 		var cat = HillType.munroTop.rawValue
 		if category == .munro{
 			cat = HillType.munro.rawValue
 		}
 		
-		var querySql = "SELECT * FROM munro where and \"Post 1997\" = '\(cat)';"
+		let querySql = "SELECT * FROM munro where \"Post 1997\" = '\(cat)'"
 		
-		if maxResults != 0 {
-			querySql = "SELECT * FROM munro where \"Post 1997\" = '\(cat)' LIMIT 0,\(maxResults);"
-		}
-		
-		runQuery(query:querySql)
+		runQuery(query:querySql, orderByCategory:orderByCategory, orderByType:orderByType, maxResults:maxResults)
 	}
 
-	func munroBy(maxHeight:Int = 5000, maxResults:Int = 0){
+	func munroBy(maxHeight:Int = 5000, maxResults:Int = 0, orderByCategory: OrderCategory = OrderCategory.id, orderByType: OrderType = OrderType.ascending){
 		
-		var querySql = "SELECT * FROM munro where \"Post 1997\" != '' and \"Height (m)\" < \(maxHeight);"
+		let querySql = "SELECT * FROM munro where \"Post 1997\" != '' and \"Height (m)\" < \(maxHeight)"
 
-		runQuery(query:querySql)
+		runQuery(query:querySql, orderByCategory:orderByCategory, orderByType:orderByType, maxResults:maxResults)
+
 	}
 
-	func munroBy(minHeight:Int = 0, maxResults:Int = 0){
+	func munroBy(minHeight:Int = 0, maxResults:Int = 0, orderByCategory: OrderCategory = OrderCategory.id, orderByType: OrderType = OrderType.ascending){
 		
-		var querySql = "SELECT * FROM munro where \"Post 1997\" != '' and \"Height (m)\" > \(minHeight);"
+		let querySql = "SELECT * FROM munro where \"Post 1997\" != '' and \"Height (m)\" > \(minHeight)"
 
+		runQuery(query:querySql, orderByCategory:orderByCategory, orderByType:orderByType, maxResults:maxResults)
 
-		runQuery(query:querySql)
 	}
 
-	func munroBy(minHeight:Int, maxHeight:Int, maxResults:Int = 0){
+	func munroBy(minHeight:Int, maxHeight:Int, maxResults:Int = 0, orderByCategory: OrderCategory = OrderCategory.id, orderByType: OrderType = OrderType.ascending){
 		if minHeight < maxHeight{
-			var querySql = "SELECT * FROM munro where \"Post 1997\" != '' and \"Height (m)\" between \(minHeight) and \(maxHeight);"
+			let querySql = "SELECT * FROM munro where \"Post 1997\" != '' and \"Height (m)\" between \(minHeight) and \(maxHeight)"
 
-			runQuery(query:querySql)
+			runQuery(query:querySql, orderByCategory:orderByCategory, orderByType:orderByType, maxResults:maxResults)
+
 		}else{
 			print("Error: min height should be smaller than max height")
 			return
@@ -154,4 +165,7 @@ extension SQLite3Conn {
 let d = SQLite3Conn()!
 //d.query(maxResults:10)
 //d.munroBy(name:"Beinn a' Chleibh")
-//d.munroBy(category:HillType.munro, maxResults:19)
+//d.munroBy(category:HillType.munro, maxResults:8)
+//d.munroBy(minHeight:990, maxResults: 10, orderByCategory:OrderCategory.height)
+d.munroBy(minHeight:990, maxHeight:995, maxResults: 10, orderByCategory:OrderCategory.height)
+//d.munroBy(minHeight:990, maxHeight:995, orderByCategory:OrderCategory.height, orderByType: OrderType.descending)
