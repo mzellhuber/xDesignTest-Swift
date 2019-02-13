@@ -5,163 +5,129 @@ import SQLite3
 
 
 enum SQLite3Error : Error {
-    case connectionError(String)
-    case queryError(String)
-    case valueError(String)
-    case otherError(String)
+	case connectionError(String)
+	case queryError(String)
+	case valueError(String)
+	case otherError(String)
+}
+
+enum HillType : String{
+	case munro = "MUN"
+	case munroTop = "TOP"
 }
 
 class SQLite3Conn {
-    var stmt: OpaquePointer? = nil
-    var db: OpaquePointer? = nil
-    
-    init?() {
-        let path = "\(FileManager.default.currentDirectoryPath)/munro.sqlite"
-        
-        if sqlite3_open(path, &db) != SQLITE_OK {
-            return nil
-        }
-    }
-    
-    deinit {
-        if let db = db {
-            sqlite3_close(db)
-        }
-    }
+	var stmt: OpaquePointer? = nil
+	var db: OpaquePointer? = nil
+	
+	init?() {
+		let path = "\(FileManager.default.currentDirectoryPath)/munro.sqlite"
+		
+		if sqlite3_open(path, &db) != SQLITE_OK {
+			return nil
+		}
+	}
+	
+	deinit {
+		if let db = db {
+			sqlite3_close(db)
+		}
+	}
 
 }
 
 struct Munro {
 	// Each item should contain the name, height in meters, hill category and grid reference
-    let id: Int32
-    let name: NSString
-    let height: Int32
-    let category: NSString
-    let gridReference: NSString
+	let id: Int32
+	let name: NSString
+	let height: Int32
+	let category: NSString
+	let gridReference: NSString
 }
 
 extension SQLite3Conn {
-    func prepareStatement(sql: String) throws -> OpaquePointer? {
-        var statement: OpaquePointer? = nil
-        guard sqlite3_prepare_v2(db, sql, -1, &statement, nil) == SQLITE_OK else {
-            throw SQLite3Error.otherError("error")
-        }
-        return statement
-    }
+	func prepareStatement(sql: String) throws -> OpaquePointer? {
+		var statement: OpaquePointer? = nil
+		guard sqlite3_prepare_v2(db, sql, -1, &statement, nil) == SQLITE_OK else {
+			throw SQLite3Error.otherError("error")
+		}
+		return statement
+	}
 }
 
 extension SQLite3Conn {
-    
-    func query(maxResults:Int = 0) {
-        
-        var querySql = "SELECT * FROM munro where \"Post 1997\" != '';"
 
-        if maxResults != 0 {
-        	querySql = "SELECT * FROM munro where \"Post 1997\" != '' LIMIT 0,\(maxResults) ;"
-        }
-                
-        guard let queryStatement = try? prepareStatement(sql: querySql) else {
-            return
-        }
-        
-        while (sqlite3_step(queryStatement) == SQLITE_ROW) {
-            let id = sqlite3_column_int(queryStatement, 0)
-            
-            let queryResultNameCol = sqlite3_column_text(queryStatement, 5)
-            let name = String(cString: queryResultNameCol!)
-            let height = sqlite3_column_int(queryStatement, 9)
+	func runQuery(query:String){
+		guard let queryStatement = try? prepareStatement(sql: query) else {
+			return
+		}
 
-            let queryResultCategoryCol = sqlite3_column_text(queryStatement, 27)
-            var category = String(cString: queryResultCategoryCol!)
-            if category == "MUN"{
-            	category = "Munro"
-            }else{
-            	category = "Munro Top"
-            }
+		while (sqlite3_step(queryStatement) == SQLITE_ROW) {
+			let id = sqlite3_column_int(queryStatement, 0)
+			
+			let queryResultNameCol = sqlite3_column_text(queryStatement, 5)
+			let name = String(cString: queryResultNameCol!)
+			let height = sqlite3_column_int(queryStatement, 9)
 
-            let queryResultGridCol = sqlite3_column_text(queryStatement, 13)
-            let grid = String(cString: queryResultGridCol!)
+			let queryResultCategoryCol = sqlite3_column_text(queryStatement, 27)
+			var category = String(cString: queryResultCategoryCol!)
+			if category == HillType.munro.rawValue{
+				category = "Munro"
+			}else{
+				category = "Munro Top"
+			}
 
-            // Each item should contain the name, height in meters, hill category and grid reference
-            print("Name: \(name) | Height: \(height)m | Category: \(category) | Grid Reference: \(grid)")
-        }
-        
-        sqlite3_finalize(queryStatement)
-    }
+			let queryResultGridCol = sqlite3_column_text(queryStatement, 13)
+			let grid = String(cString: queryResultGridCol!)
 
-    func munroBy(id: Int32) -> Munro? {
-        let querySql = "SELECT * FROM munro WHERE \"Running No\" = ?;"
-        
-        guard let queryStatement = try? prepareStatement(sql: querySql) else {
-            return nil
-        }
-        
-        defer {
-            sqlite3_finalize(queryStatement)
-        }
-        
-        guard sqlite3_bind_int(queryStatement, 1, id) == SQLITE_OK else {
-            return nil
-        }
-        
-        guard sqlite3_step(queryStatement) == SQLITE_ROW else {
-            return nil
-        }
-        
-        let id = sqlite3_column_int(queryStatement, 0)
-        
-        let queryResultCol1 = sqlite3_column_text(queryStatement, 5)
-        let name = String(cString: queryResultCol1!) as NSString
+			// Each item should contain the name, height in meters, hill category and grid reference
+			print("Name: \(name) | Height: \(height)m | Category: \(category) | Grid Reference: \(grid)")
+		}
+		
+		sqlite3_finalize(queryStatement)
+	}
 
-        let height = sqlite3_column_int(queryStatement, 9)
+	func query(maxResults:Int = 0) {
+		
+		var querySql = "SELECT * FROM munro where \"Post 1997\" != '';"
 
-        let queryResultCategoryCol = sqlite3_column_text(queryStatement, 27)
-        var category = String(cString: queryResultCategoryCol!)
-        if category == "MUN"{
-            category = "Munro"
-        }else{
-            category = "Munro Top"
-        }
+		if maxResults != 0 {
+			querySql = "SELECT * FROM munro where \"Post 1997\" != '' LIMIT 0,\(maxResults) ;"
+		}
+				
+		runQuery(query:querySql)
+	}
+	
+	func munroBy(id: Int32){
+		let querySql = "SELECT * FROM munro WHERE \"Running No\" = \(id) and \"Post 1997\" != '';"
+		
+		runQuery(query:querySql)
+	}
 
-        let queryResultGridCol = sqlite3_column_text(queryStatement, 13)
-        let grid = String(cString: queryResultGridCol!)
-        
-        return Munro(id: id, name: name, height: height, category: category as NSString, gridReference: grid as NSString)
-    }
+	func munroBy(name: String){
+		let querySql = "SELECT * FROM munro WHERE Name = \"\(name)\" and \"Post 1997\" != '';"
+		runQuery(query:querySql)
+	}
 
-    func munroBy(name: String) -> Munro? {
-        let querySql = "SELECT * FROM munro WHERE \"Name\" = ?;"
-        
-        guard let queryStatement = try? prepareStatement(sql: querySql) else {
-            return nil
-        }
-        
-        defer {
-            sqlite3_finalize(queryStatement)
-        }
-        
-        guard sqlite3_bind_text(queryStatement, 1, name, -1, nil) == SQLITE_OK else {
-            return nil
-        }
-        
-        guard sqlite3_step(queryStatement) == SQLITE_ROW else {
-            return nil
-        }
-        
-        let id = sqlite3_column_int(queryStatement, 0)
-        
-        let queryResultCol1 = sqlite3_column_text(queryStatement, 5)
-        let name = String(cString: queryResultCol1!) as NSString
-        
-        return Munro(id: id, name: name, height: 0, category: "", gridReference: "")
-    }
+	func munroBy(category: HillType, maxResults:Int = 0){
+		var cat = HillType.munroTop.rawValue
+		if category == .munro{
+			cat = HillType.munro.rawValue
+		}
+		
+		var querySql = "SELECT * FROM munro where and \"Post 1997\" = '\(cat)';"
+		
+		if maxResults != 0 {
+			querySql = "SELECT * FROM munro where \"Post 1997\" = '\(cat)' LIMIT 0,\(maxResults);"
+		}
+		
+		runQuery(query:querySql)
+		
+	}
 }
 
 //Tests
 let d = SQLite3Conn()!
-d.query(maxResults:10)
-let munro = d.munroBy(id:2)
-print("\(munro?.id) \(munro?.name) \(munro?.height) \(munro?.category) \(munro?.gridReference)")
-
-let munro2 = d.munroBy(name:"Beinn an Lochain")
-print("\(munro2?.id) \(munro2?.name) \(munro2?.height) \(munro2?.category) \(munro2?.gridReference)")
+//d.query(maxResults:10)
+//d.munroBy(name:"Beinn a' Chleibh")
+//d.munroBy(category:HillType.munro, maxResults:19)
