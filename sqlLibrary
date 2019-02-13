@@ -33,7 +33,6 @@ class SQLite3Conn {
 			sqlite3_close(db)
 		}
 	}
-
 }
 
 struct Munro {
@@ -122,7 +121,32 @@ extension SQLite3Conn {
 		}
 		
 		runQuery(query:querySql)
+	}
+
+	func munroBy(maxHeight:Int = 5000, maxResults:Int = 0){
 		
+		var querySql = "SELECT * FROM munro where \"Post 1997\" != '' and \"Height (m)\" < \(maxHeight);"
+
+		runQuery(query:querySql)
+	}
+
+	func munroBy(minHeight:Int = 0, maxResults:Int = 0){
+		
+		var querySql = "SELECT * FROM munro where \"Post 1997\" != '' and \"Height (m)\" > \(minHeight);"
+
+
+		runQuery(query:querySql)
+	}
+
+	func munroBy(minHeight:Int, maxHeight:Int, maxResults:Int = 0){
+		if minHeight < maxHeight{
+			var querySql = "SELECT * FROM munro where \"Post 1997\" != '' and \"Height (m)\" between \(minHeight) and \(maxHeight);"
+
+			runQuery(query:querySql)
+		}else{
+			print("Error: min height should be smaller than max height")
+			return
+		}
 	}
 }
 
