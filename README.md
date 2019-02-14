@@ -25,7 +25,7 @@ minimum height)
 ```console
 foo@bar:$ ./importDatabase
 ```
-Use any of the available Swift functions to query the munros
+Use any of the available Swift functions to query the munros inside the sqlLibrary file
 
 ```swift
 let d = SQLite3Conn()!
@@ -36,6 +36,11 @@ d.munroBy(category:HillType.munro, maxResults:8)
 d.munroBy(minHeight:990, maxResults: 10, orderByCategory:OrderCategory.height)
 d.munroBy(minHeight:990, maxHeight:995, maxResults: 10, orderByCategory:OrderCategory.height)
 d.munroBy(minHeight:990, maxHeight:995, orderByCategory:OrderCategory.height, orderByType: OrderType.descending)
+```
+
+Call it in the terminal like
+```console
+foo@bar:$ ./sqlLibrary
 ```
 
 ## Author
