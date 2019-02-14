@@ -165,7 +165,8 @@ extension SQLite3Conn {
 let d = SQLite3Conn()!
 //d.query(maxResults:10)
 //d.munroBy(name:"Beinn a' Chleibh")
+d.munroBy(id:1)
 //d.munroBy(category:HillType.munro, maxResults:8)
 //d.munroBy(minHeight:990, maxResults: 10, orderByCategory:OrderCategory.height)
-d.munroBy(minHeight:990, maxHeight:995, maxResults: 10, orderByCategory:OrderCategory.height)
+//d.munroBy(minHeight:990, maxHeight:995, maxResults: 10, orderByCategory:OrderCategory.height)
 //d.munroBy(minHeight:990, maxHeight:995, orderByCategory:OrderCategory.height, orderByType: OrderType.descending)

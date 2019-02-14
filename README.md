@@ -18,6 +18,26 @@ order.
 minimum height)
 
 
+### Usage
+
+- Run the importDatabase bash script to convert the csv to sqlite
+
+```console
+foo@bar:$ ./importDatabase
+```
+Use any of the available Swift functions to query the munros
+
+```swift
+let d = SQLite3Conn()!
+d.query(maxResults:10)
+d.munroBy(name:"Beinn a' Chleibh")
+d.munroBy(id:1)
+d.munroBy(category:HillType.munro, maxResults:8)
+d.munroBy(minHeight:990, maxResults: 10, orderByCategory:OrderCategory.height)
+d.munroBy(minHeight:990, maxHeight:995, maxResults: 10, orderByCategory:OrderCategory.height)
+d.munroBy(minHeight:990, maxHeight:995, orderByCategory:OrderCategory.height, orderByType: OrderType.descending)
+```
+
 ## Author
 
 ✨✨mzellhuber✨✨ [https://github.com/mzellhuber](https://github.com/mzellhuber)
